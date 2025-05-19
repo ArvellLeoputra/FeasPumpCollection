@@ -30,7 +30,7 @@ class DomainState;
 class Domain
 {
 public:
-	~Domain() { clear(); }
+	~Domain() { clear(); }  // destructor
 	/**
 	 * Add a variable to the domain
 	 * @param name variable name
@@ -49,6 +49,7 @@ public:
 	inline bool isVarFixed(int j) const { return fixed[j]; }
 	inline char varType(int j) const { return type[j]; }
 	//@}
+	
 	//@{
 	// setters
 	inline void fixBinUp(int j)
@@ -59,6 +60,7 @@ public:
 		fixed[j] = true;
 		if (emitFixedBinUp) emitFixedBinUp(j);
 	}
+
 	inline void fixBinDown(int j)
 	{
 		DOMINIQS_ASSERT( dominiqs::equal(lb[j], 0.0) );
@@ -67,6 +69,7 @@ public:
 		fixed[j] = true;
 		if (emitFixedBinDown) emitFixedBinDown(j);
 	}
+
 	inline void tightenLb(int j, double newValue)
 	{
 		DOMINIQS_ASSERT( type[j] != 'B' );
@@ -79,6 +82,7 @@ public:
 			if (emitTightenedLb) emitTightenedLb(j, newValue, oldValue);
 		}
 	}
+
 	inline void tightenUb(int j, double newValue)
 	{
 		DOMINIQS_ASSERT( type[j] != 'B' );
@@ -92,6 +96,7 @@ public:
 		}
 	}
 	//@}
+
 	//@{
 	// callbacks
 	std::function<void (int)> emitFixedBinUp;

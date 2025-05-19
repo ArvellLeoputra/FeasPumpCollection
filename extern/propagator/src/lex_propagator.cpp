@@ -86,6 +86,8 @@ LexLessEqualProp::LexLessEqualProp(ActiveDomain* d, const std::string& _name, co
 	name = _name;
 	DOMINIQS_ASSERT( domain );
 	DOMINIQS_ASSERT( x.size() == y.size() );
+
+	// check if there are continuous variables
 	for (int j: x)
 	{
 		if (domain->varType(j) == 'C') throw std::runtime_error("Cannot have continuous variables in lex constraint!");
@@ -94,19 +96,25 @@ LexLessEqualProp::LexLessEqualProp(ActiveDomain* d, const std::string& _name, co
 	{
 		if (domain->varType(j) == 'C') throw std::runtime_error("Cannot have continuous variables in lex constraint!");
 	}
+
 	n = x.size();
 	alpha = 0;
 	beta = -1;
+
 	// setup alpha
 	while ((alpha < n) && fixedEqual(alpha)) ++alpha;
-	if ((alpha >= n) || checkLex(alpha))
+	if ((alpha >= n) || checkLex(alpha)) 
+	// alpha >= n => all elements of x and y are fixed and equal => x == y
+	// checkLex(alpha) => x <= y lexicographically
+	// in both cases, x ≤_lex y
 	{
 		state = CSTATE_ENTAILED;
 		return;
 	}
+	
 	// setup beta
 	int i = alpha;
-	for (;i < n; i++)
+	for (;i < n; i++)  // empty initialization
 	{
 		if (greaterThan(domain->varLb(x[i]), domain->varUb(y[i]))) break;
 		if (equal(domain->varLb(x[i]), domain->varUb(y[i])))
@@ -115,14 +123,17 @@ LexLessEqualProp::LexLessEqualProp(ActiveDomain* d, const std::string& _name, co
 		}
 		else beta = -1;
 	}
-	if (i == n) beta = n + 1;
-	else if (beta == -1) beta = i;
+
+	if (i == n) beta = n + 1;  // beta here represents the end of the array
+	else if (beta == -1) beta = i;  // beta here represents the divergence point
 	// std::cout << fmt::format("alpha = {} beta = {}", alpha, beta) << std::endl;
+
 	if (alpha >= beta)
 	{
 		state = CSTATE_INFEAS;
 		return;
 	}
+	
 	// setup advisors
 	for (unsigned int i = 0; i < x.size(); i++)
 	{
@@ -137,7 +148,7 @@ void LexLessEqualProp::propagate()
 	if (state == CSTATE_UNKNOWN)
 	{
 		int xA = x[alpha];
-		int yA = y [alpha];
+		int yA = y[alpha];
 		double xLB = domain->varLb(xA);
 		double xUB = domain->varUb(xA);
 		double yLB = domain->varLb(yA);
@@ -148,7 +159,7 @@ void LexLessEqualProp::propagate()
 			if (greaterEqualThan(xUB, yUB))
 			{
 				// impose x_alpha.ub < y_alpha.ub
-				double newUB = yUB - 1.0;
+				double newUB = yUB - 1.0;  // new UB for x_alpha
 				if (lessThan(newUB, xLB)) { state = CSTATE_INFEAS; return; }
 				if (domain->varType(xA) == 'B') domain->fixBinDown(xA);
 				else domain->tightenUb(xA, newUB);
@@ -206,10 +217,13 @@ bool LexLessEqualProp::fixedEqual(int i) const
 	return (domain->isVarFixed(x[i]) && domain->isVarFixed(y[i]) && (domain->varLb(x[i]) == domain->varLb(y[i])));
 }
 
+// check if x[i] < y[i] lexicographically
 bool LexLessEqualProp::checkLex(int i) const
 {
 	return ( lessThan(domain->varUb(x[i]), domain->varLb(y[i]))
 		|| ((i == (n - 1)) && lessEqualThan(domain->varUb(x[i]), domain->varLb(y[i]))) );
+	// 1st case: x < y lex. since UB(x[i]) < LB(y[i])
+	// 2nd case: x <= y lex. since UB(x[i]) <= LB(y[i]) and i == n - 1
 }
 
 void LexLessEqualProp::updateState(int i)

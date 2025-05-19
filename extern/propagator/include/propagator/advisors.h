@@ -28,8 +28,8 @@ class PropagationEngine;
 class AdvisorI
 {
 public:
-	inline AdvisorI(Propagator& p, int j) : prop(p), var(j) {}
-	virtual ~AdvisorI() {}
+	inline AdvisorI(Propagator& p, int j) : prop(p), var(j) {}  // constructor
+	virtual ~AdvisorI() {}  // virtual destructor
 	//@{
 	inline Propagator& getPropagator() const { return prop; }
 	inline int getVar() const { return var; }
@@ -42,6 +42,7 @@ public:
 	virtual void fixedUp() {}
 	virtual void fixedDown() {}
 	//@}
+
 	//@{
 	/**
 	 * events for other (general integer and continuous) variables
@@ -52,6 +53,7 @@ public:
 	virtual void tightenLb(double delta, bool decreaseInfCnt, bool propagate) {}
 	virtual void tightenUb(double delta, bool decreaseInfCnt, bool propagate) {}
 	//@}
+	
 	// output (virtual output idiom)
 	virtual std::ostream& print(std::ostream& out) const { return out; }
 protected:

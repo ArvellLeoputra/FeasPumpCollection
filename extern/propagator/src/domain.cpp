@@ -19,9 +19,11 @@ void Domain::pushVar(const std::string& name, char t, double l, double u)
 	fixed.push_back(equal(l, u));
 }
 
-StatePtr Domain::getStateMgr()
+StatePtr Domain::getStateMgr()  // get state manager
+// the function returns a StatePtr object because DomainState is derived from State
 {
-	return std::make_shared<DomainState>(*this);
+	return std::make_shared<DomainState>(*this);  // returns a shared_ptr to DomainState object
+	// *this refers to the current object of Domain class
 }
 
 void Domain::clear()

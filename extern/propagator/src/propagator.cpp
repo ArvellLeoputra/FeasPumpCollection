@@ -16,7 +16,7 @@ const char* PropagatorStateName[] = {
 	"infeasible"
 };
 
-PropagatorFactory::PropagatorFactory() : numCreated(0) {}
+PropagatorFactory::PropagatorFactory() : numCreated(0) {}  // default constructor
 
 void PropagatorFactory::reset()
 {

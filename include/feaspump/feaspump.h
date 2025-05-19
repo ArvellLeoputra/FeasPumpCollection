@@ -158,6 +158,7 @@ private:
 	double primalBound;
 	// stats
 	int firstPerturbation;
+	int firstRestart;
 	int pertCnt;
 	int restartCnt;
 	int walksatCnt;

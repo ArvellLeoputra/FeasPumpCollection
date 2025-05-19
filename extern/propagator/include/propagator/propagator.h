@@ -37,7 +37,7 @@ enum PropagatorState {
 	CSTATE_INFEAS = 3
 };
 
-extern const char* PropagatorStateName[];
+extern const char* PropagatorStateName[];  // defined in propagator.cpp
 
 class PropagatorFactory;
 class AdvisorI;
@@ -78,7 +78,7 @@ public:
 	/**
 	 * Do a one-pass propagation of the constraint
 	 */
-	virtual void propagate() =0;
+	virtual void propagate() =0;  // pure virtual function
 	// get a state handler
 	virtual StatePtr getStateMgr() { return 0; }
 	// output (virtual output idiom)
@@ -97,6 +97,7 @@ protected:
 
 typedef std::shared_ptr<Propagator> PropagatorPtr;
 
+// operator overloading
 inline std::ostream& operator<<(std::ostream& out, const Propagator& prop) { return prop.print(out); }
 
 /**

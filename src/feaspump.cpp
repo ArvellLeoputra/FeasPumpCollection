@@ -34,13 +34,15 @@ using namespace dominiqs;
 #define LOG_CONFIG( what ) LOG_ITEM("fp."#what, what)
 
 
-static bool isSolutionInteger(const std::vector<int>& integers, const std::vector<double>& x, double eps)
+static bool isSolutionInteger(const std::vector<int>& integers, const std::vector<double>& x, double eps) 
+// checks the integrality of the indices listed (in integers vector) variables of x
 {
 	for (int j: integers) if (!isInteger(x[j], eps)) return false;
 	return true;
 }
 
-static int solutionNumFractional(const std::vector<int>& integers, const std::vector<double>& x, double eps)
+static int solutionNumFractional(const std::vector<int>& integers, const std::vector<double>& x, double eps)  
+// checks # of fractional variables of x
 {
 	int tot = 0;
 	for (int j: integers) if (!isInteger(x[j], eps)) tot++;
@@ -48,32 +50,41 @@ static int solutionNumFractional(const std::vector<int>& integers, const std::ve
 }
 
 static double solutionsDistance(const std::vector<int>& integers, const std::vector<double>& x1, const std::vector<double>& x2)
+// computes the Euclidean distance between two solutions (only for indices listed in integers vector)
 {
 	double tot = 0.0;
-	for (int j: integers) tot += fabs(x1[j] - x2[j]);
-	return tot;
+	for (int j: integers) tot += (x1[j] - x2[j]) * (x1[j] - x2[j]);
+	return sqrt(tot);
 }
+
 static double solutionsLinfDistance(const std::vector<int>& integers, const std::vector<double>& x1, const std::vector<double>& x2)
+// compute the L-infinity distance between two solutions (only for indices listed in integers vector)
 {
 	double dist = 0.0;
 	for (int j: integers) dist = std::max(dist, fabs(x1[j] - x2[j]));
 	return dist;
 }
+
 static bool areSolutionsEqual(const std::vector<int>& integers, const std::vector<double>& x1, const std::vector<double>& x2, double eps)
+// checks if x1 and x2 are equal (only for indices listed in integers vector)
 {
 	for (int j: integers) if (different(x1[j], x2[j], eps)) return false;
 	return true;
 }
 
 static bool isSolutionFeasible(const std::vector<double>& x, const std::vector<ConstraintPtr>& rows)
+// checks if the solution x is feasible for all constraints in rows
 {
 	for (auto c: rows) {
-		if (!c->satisfiedBy(&x[0]))  return false;
+		if (!c->satisfiedBy(&x[0])) return false;  // &x[0] passes the entire vector as a pointer, not just x[0]
 	}
 	return true;
 }
 
 static std::vector<double> exponDecayVector(const double factor,const int numPoints)
+// computes the exponential decay vector
+// the first element is 1.0, the second is factor, the third is factor^2, ...
+// the resulting vector is normalized to sum to 1.0
 {
 		// compute the sum of all elements -> used to make a convex combination
 		double sumAll = 0.0;
@@ -102,6 +113,9 @@ static std::vector<double> exponDecayVector(const double factor,const int numPoi
 }
 
 static std::vector<double> harmonicVector(const int numPoints)
+// computes the harmonic vector
+// the first element is 1.0, the second is 1/2, the third is 1/3, ...
+// the resulting vector is normalized to sum to 1.0
 {
 		// compute the sum of all elements -> used to make a convex combination
 		double sumAll = 0.0;
@@ -128,7 +142,6 @@ static std::vector<double> harmonicVector(const int numPoints)
 		DOMINIQS_ASSERT( resVector.size() == numPoints);
 		return resVector;
 }
-
 
 namespace dominiqs {
 
@@ -184,7 +197,6 @@ static const bool DEF_MULTIRENS_STAGE_3 = false;
 static const bool DEF_NORMAL_MIP_STAGE_3 = false;
 static const bool DEF_RENS_CLOSEST_DIST_STAGE_3 = false;
 
-
 // number of fractional numbers to be considered in objective (not working)
 static const int DEF_FRACS_OBJ = 1;
 
@@ -239,6 +251,7 @@ void FeasibilityPump::readConfig()
 	std::string frac2intName = gConfig().get("fp.frac2int", std::string("propround"));
 	frac2int = SolutionTransformerPtr(TransformersFactory::getInstance().create(frac2intName));
 	DOMINIQS_ASSERT( frac2int );
+
 	// optimization methods
 	std::string firstMethod = gConfig().get("fp.firstOptMethod", std::string("default"));
 	if (firstMethod == "default") firstOptMethod = 'S';
@@ -246,13 +259,16 @@ void FeasibilityPump::readConfig()
 	else if (firstMethod == "dual") firstOptMethod = 'D';
 	else if (firstMethod == "barrier") firstOptMethod = 'B';
 	else throw std::runtime_error(std::string("Unknown optimization method: ") + firstMethod);
+	
+	// reoptimization methods
 	std::string reMethod = gConfig().get("fp.reOptMethod", std::string("default"));
 	if (reMethod == "default") reOptMethod = 'S';
 	else if (reMethod == "primal") reOptMethod = 'P';
 	else if (reMethod == "dual") reOptMethod = 'D';
 	else if (reMethod == "barrier") reOptMethod = 'B';
 	else throw std::runtime_error(std::string("Unknown optimization method: ") + reMethod);
-	//other options
+
+	// other options
 	READ_FROM_CONFIG( timeLimit, DEF_TIME_LIMIT );
 	// READ_FROM_CONFIG( timeMult, DEF_TIME_MULT );
 	timeMult = 0.0;
@@ -307,8 +323,6 @@ void FeasibilityPump::readConfig()
 	READ_FROM_CONFIG( pdlpTolDecreaseFactor, DEF_PDLP_TOLERANCE_DECREASE );
 	READ_FROM_CONFIG( pdlpWarmStart, DEF_PDLP_WARMSTART );
 
-
-	//till here
 	// display options
 	display.headerInterval = gConfig().get("headerInterval", 10);
 	display.iterationInterval = gConfig().get("iterationInterval", 1);
@@ -329,7 +343,6 @@ void FeasibilityPump::readConfig()
 
 	itr1NoImpr =  stage1IterLimit;
 	itr2NoImpr =  stage2IterLimit;
-
 
 	// added
 	LOG_CONFIG( numIntegersObj );
@@ -379,36 +392,40 @@ void FeasibilityPump::readConfig()
 	frac2int->readConfig();
 }
 
-
+// checks if a solution was found
 bool FeasibilityPump::foundSolution() const
 {
 	return hasIncumbent;
 }
 
-
+// retrieves the solution if exists
 void FeasibilityPump::getSolution(std::vector<double>& x) const
 {
 	DOMINIQS_ASSERT( hasIncumbent );
-	x.resize(incumbent.size());
+	x.resize(incumbent.size());  // we use a temporary vector to avoid copying the solution
 	copy(incumbent.begin(), incumbent.end(), x.begin());
 }
 
-
+// computes the objective value of the solution x
 double FeasibilityPump::getSolutionValue(const std::vector<double>& x) const
+// obj is the objective vector, i.e. the coefficients of the objective function
+// objOffset is the offset of the objective function, normally the constant values in the objective function
 {
 	return std::inner_product(x.begin(), x.end(), obj.begin(), 0.0) + objOffset;
 }
 
-
+// returns the number of pumping iterations performed
 int FeasibilityPump::getIterations() const
 {
 	return nitr;
 }
 
+// resets the algorithm
 void FeasibilityPump::reset()
 {
 	nitr = 0;
 	firstPerturbation = 0;
+	firstRestart = 0;
 	pertCnt = 0;
 	restartCnt = 0;
 	walksatCnt = 0;
@@ -449,14 +466,17 @@ void FeasibilityPump::init(MIPModelPtr _model, const std::vector<char>& ctype)
 
 	reset();
 	model = _model;
-	int n = model->ncols();
-	// if user passed column type information, used it
+	int n = model->ncols();  // n is the number of columns in the model
+	
+	// if the user has passed a vector ctype that specifies the types of the columns 
+	// (e.g., continuous, binary, integer), it will be applied to the model
 	if (ctype.size())
 	{
 		DOMINIQS_ASSERT(n == (int)ctype.size());
 		for (int j = 0; j < n; j++)  model->ctype(j, ctype[j]);
 	}
-	frac2int->init(model, true);
+
+	frac2int->init(model, true);  // init is defined in transformers.cpp
 	frac_x.resize(n, 0);
 	integer_x.resize(n, 0);
 	obj.resize(n, 0);
@@ -498,15 +518,14 @@ void FeasibilityPump::init(MIPModelPtr _model, const std::vector<char>& ctype)
 		rows[i] = c;
 	}
 
-	isBinary = (gintegers.size() == 0);
-	isPureInteger = (fixed.size() + integers.size() == (unsigned int)n);
-	consoleLog("#cols = {} #bins = {} #integers = {}", n, binaries.size(), gintegers.size());
+	isBinary = (gintegers.size() == 0);  // might still has some continuous variables
+	isPureInteger = (fixed.size() + integers.size() == (unsigned int)n);  // all variables are integers
+	consoleLog("#cols = {} #bins = {} #gintegers = {} #integers = {}", n, binaries.size(), gintegers.size(), integers.size());
 	consoleLog("fixedCnt = {} isBinary = {} isPureInteger = {}",
 				fixed.size(), isBinary, isPureInteger);
 	objOffset = model->objOffset();
 	model->switchToLP();
 }
-
 
 bool FeasibilityPump::pump(const std::vector<double>& xStart, bool pFeas)
 {
@@ -522,9 +541,9 @@ bool FeasibilityPump::pump(const std::vector<double>& xStart, bool pFeas)
 	double dualBound = -static_cast<int>(origObjSense) * INFBOUND;
 	primalBound = static_cast<int>(origObjSense) * INFBOUND;	
 	// setup iteration display
-	display.addColumn("iter", 0, 6);
+	display.addColumn("iter", 0, 6);  // 0th column, 6 spaces
 	display.addColumn("stage", 1, 6);
-	display.addColumn("alpha", 2, 10, 4);
+	display.addColumn("alpha", 2, 10, 4);  // 2nd column, 10 spaces, 4 decimal precision
 	display.addColumn("origObj", 3, 20);
 	display.addColumn("projObj", 6, 15, 4);
 	display.addColumn("dist", 8, 15, 4);
@@ -570,10 +589,8 @@ bool FeasibilityPump::pump(const std::vector<double>& xStart, bool pFeas)
 		}
 	}
 
-
 	consoleDebug(DebugLevel::Verbose, "startNumFrac = {}", solutionNumFractional(integers, frac_x, integralityEps));
 	consoleLog("");
-
 
 	// setup for changing objective function
 	model->objSense(ObjSense::MIN); //< change obj sense: minimize distance
@@ -588,12 +605,11 @@ bool FeasibilityPump::pump(const std::vector<double>& xStart, bool pFeas)
 	}
 	if (runningAlpha == 0.0)  display.setVisible("alpha", false);
 
-
 	consoleInfo("[pump]");
 	display.printHeader(std::cout);
 
+	// stage 1: relax integrality constraints of ginteger variables
 	int stage = 1;
-	// stage 1
 	double timeModelS1 = 0.0;
 	double timeModelS2 = 0.0;
 	bool found = pumpLoop(runningAlpha, stage, dualBound, timeModelS1);
@@ -613,8 +629,9 @@ bool FeasibilityPump::pump(const std::vector<double>& xStart, bool pFeas)
 		primalFeas = false;
 	}
 
-	// stage 2
-	// can skip stage 2 only if we have found a stage-1 solution and there are no general integers
+	// stage 2: integrality constraints of ginteger variables are restored
+	// can skip stage 2 if there are no general integers or
+	// if we have found a stage-1 solution, that satisfies all integrality constraints
 	if (!found || gintegers.size())
 	{
 		closestDist = INFBOUND;
@@ -656,6 +673,7 @@ bool FeasibilityPump::pump(const std::vector<double>& xStart, bool pFeas)
 	LOG_ITEM("time", chrono.getTotal());
 	LOG_ITEM("timeModel", timeModelS1 + timeModelS2);
 	LOG_ITEM("firstPerturbation", firstPerturbation);
+	LOG_ITEM("firstRestart", firstRestart);
 	LOG_ITEM("perturbationCnt", pertCnt);
 	LOG_ITEM("restartCnt", restartCnt);
 	LOG_ITEM("walksatCnt", walksatCnt);
@@ -667,7 +685,6 @@ bool FeasibilityPump::pump(const std::vector<double>& xStart, bool pFeas)
 
 void FeasibilityPump::solveInitialLP()
 {
-
 	double timeLeft;
 	if (analcenterFP)
 	{
@@ -681,15 +698,16 @@ void FeasibilityPump::solveInitialLP()
 	}
 
 	consoleInfo("[initialSolve]");
-	double elapsedBefore = chrono.getElapsed();
-	timeLeft = std::max(timeLimit - chrono.getElapsed(), 0.0);
-	model->dblParam(DblParam::TimeLimit, timeLeft);
-	double time_model = model->lpopt(firstOptMethod, false, true);
-	rootTime = chrono.getElapsed() - elapsedBefore;
+	double elapsedBefore = chrono.getElapsed();  // time used before solving the LP
+	timeLeft = std::max(timeLimit - chrono.getElapsed(), 0.0);  // time left
+	model->dblParam(DblParam::TimeLimit, timeLeft);  // set time limit
+	double time_model = model->lpopt(firstOptMethod, false, true);  // solve the LP
+
+	rootTime = chrono.getElapsed() - elapsedBefore;  // time used to solve the LP
 	int simplexIt = model->intAttr(IntAttr::SimplexIterations);
 	int barrierIt = model->intAttr(IntAttr::BarrierIterations);
 	int pdlpIt = model->intAttr(IntAttr::PDLPIterations);
-
+	
 	rootLpIter = std::max(simplexIt, barrierIt);
 	model->sol(&frac_x[0]);
 	primalFeas = (model->isPrimalFeas() && isSolutionFeasible(frac_x, rows));
@@ -699,16 +717,21 @@ void FeasibilityPump::solveInitialLP()
 				simplexIt, barrierIt, pdlpIt, rootTime, primalFeas, dualBound);
 }
 
-
 void FeasibilityPump::perturbe(std::vector<double>& x, bool ignoreGeneralIntegers)
 {
+	std::cout << "=======================" << std::endl;
+	std::cout << "Doing perturbation .." << std::endl;
+	std::cout << "=======================" << std::endl;
+	
 	pertCnt++;
 
+	std::cout << "Perturbation #" << pertCnt << std::endl;
+
 	std::multimap< double, int, std::greater<double> > toOrder;
-	int nflips = avgFlips * (rnd.getFloat() + 0.5);
+	int nflips = avgFlips * (rnd.getFloat() + 0.5);  // [0.5, 1.5] * avgFlips
 	int flipsDone = 0;
 
-	// add fractional variables
+	// add fractional variables and sort from the most fractional to the least
 	double sigma;
 	if (ignoreGeneralIntegers)
 	{
@@ -728,7 +751,7 @@ void FeasibilityPump::perturbe(std::vector<double>& x, bool ignoreGeneralInteger
 	}
 
 	// compute number of flips to do
-	int nFracFlips = std::min(nflips, (int) toOrder.size()); //number of vars to be flipped from fractional
+	int nFracFlips = std::min(nflips, (int) toOrder.size());  // number of vars to be flipped from fractional
 
 	// add variables from walksat if needed
 	if (walksatPerturbe && (nFracFlips < nflips))
@@ -786,24 +809,30 @@ void FeasibilityPump::perturbe(std::vector<double>& x, bool ignoreGeneralInteger
 	display.set("#flips", flipsDone);
 }
 
-
 void FeasibilityPump::restart(std::vector<double>& x, bool ignoreGeneralIntegers)
 {
+	std::cout << "=======================" << std::endl;
+	std::cout << "Doing restart .." << std::endl;
+	std::cout << "=======================" << std::endl;
+
 	restartCnt++;
+
 	// get previous solution
 	DOMINIQS_ASSERT( lastIntegerX.size() );
 	const std::vector<double>& previousSol = lastIntegerX.begin()->second;
+
 	// perturbe
 	double sigma;
 	double r;
+
 	// perturbe binaries
 	int changed = 0;
 	unsigned int size = binaries.size();
 	for (unsigned int i = 0; i < size; i++)
 	{
 		int j = binaries[i];
-		r = rnd.getFloat() - 0.47;
-		if ( r > 0 && equal(x[j], previousSol[j], integralityEps) )
+		r = rnd.getFloat() - 0.47;  // r = [-0.47, 0.53)
+		if ( r > 0 && equal(x[j], previousSol[j], integralityEps) )  // change only if the value is the same as in the previous solution
 		{
 			sigma = fabs(x[j] - frac_x[j]);
 			if ( (sigma + r) > 0.5 )
@@ -870,23 +899,30 @@ void FeasibilityPump::restart(std::vector<double>& x, bool ignoreGeneralIntegers
 	display.set("#flips", changed);
 }
 
-
 bool FeasibilityPump::pumpLoop(double& runningAlpha, int stage, double& dualBound, double& timeModel)
 {
+	std::cout << "=======================" << std::endl;
+	std::cout << "We are now in PUMP LOOP" << std::endl;
+	std::cout << "=======================" << std::endl;
+
 	// setup
 	lastIntegerX.clear();
 	multipleIntegerX.clear();
 	lastFracX.clear();
+
 	int n = model->ncols();
 	std::vector<double> distObj(n, 0);
 	std::vector<int> colIndices(n);
-	std::iota(colIndices.begin(), colIndices.end(), 0);
+	std::iota(colIndices.begin(), colIndices.end(), 0);  // fills colIndices with 0, 1, ..., n-1
+
 	int oldIterCnt = nitr;
 	int stageIterLimit = (stage == 1) ? stage1IterLimit : stage2IterLimit;
 	bool ignoreGenerals = (stage == 1) ? true : false;
 	const auto& intSubset = (stage == 1) ? binaries : integers;
+
 	frac2int->ignoreGeneralIntegers(ignoreGenerals);
 	double pumpTimeLimit = (timeMult > 0.0) ? timeMult*rootTime : std::numeric_limits<double>::max();
+
 	std::vector<std::string> xNames;
 	model->colNames(xNames);
 	int lpIterLimit = -1;
@@ -912,10 +948,12 @@ bool FeasibilityPump::pumpLoop(double& runningAlpha, int stage, double& dualBoun
 		&& ((nitr - oldIterCnt) < stageIterLimit)
 		&& (nitr < iterLimit))
 	{
+		// step 1: check if frac_x become LP feasible after previous loop
 		lpfeasible = isSolutionFeasible(frac_x, rows);
+
 		bool applyPdlpRestart = (!lpfeasible && isSolutionInteger(intSubset, frac_x, integralityEps));
-		// ToDo check the value of primFeas
-		// check if frac_x is feasible (w.r.t. the integer variables in this stage)
+		
+		// step 2: check if frac_x is feasible (w.r.t. the integer variables in this stage)
 		bool found = (lpfeasible && isSolutionInteger(intSubset, frac_x, integralityEps));
 		if (found || (stage == 1 && binaries.size() == 0 ))
 		{
@@ -923,7 +961,7 @@ bool FeasibilityPump::pumpLoop(double& runningAlpha, int stage, double& dualBoun
 			closestDist = 0.0;
 			closestPoint = frac_x;
 			closestFrac = frac_x;
-			// then break this stage
+			// then break this stage and we are done
 			return true;
 		}
 
@@ -936,10 +974,11 @@ bool FeasibilityPump::pumpLoop(double& runningAlpha, int stage, double& dualBoun
 		display.resetIteration();
 		if (display.needHeader(nitr)) display.printHeader(std::cout);
 
-		// frac -> int
+		// step 3: start rounding frac_x
 		roundWatch.start();
 
-		// If we want to round a convex combination of fractional points instead of the last one
+		// if we want to round a convex combination of fractional points instead of the last one
+		// here, we hard set numFracsObj to 1, so we can skip the aggregation
 		if (numFracsObj != 1 ) // aggregate fracs and then round
 		{
 			std::vector<double> frac2round; // convex combination of fractional points
@@ -954,13 +993,15 @@ bool FeasibilityPump::pumpLoop(double& runningAlpha, int stage, double& dualBoun
 			// get rounding
 			frac2int->apply(frac2round,integer_x);		
 		}
-		// get rounding by using AC  
+
+		// get rounding by using AC
+		// again here we hard set numFracsObj to 1, so skip
 		else if (analcenterFP) 
 		{
 			double bestgamma;
 			integerFromAC(integer_x, bestgamma, 0.05);
 		}
-		// round the last fractional point
+
 		else 
 		{	
 			frac2int->apply(frac_x, integer_x);
@@ -968,23 +1009,32 @@ bool FeasibilityPump::pumpLoop(double& runningAlpha, int stage, double& dualBoun
 		roundWatch.stop();
 		consoleDebug(DebugLevel::Verbose, "roundingTime = {}", roundWatch.getPartial());
 
-		// cycle detection and antistalling actions
-		// is it the same of the last one? If yes perturbe
+		// step 4: cycle detection and antistalling actions
+		// is it the same of the last one? if yes perturbe
 		if (lastIntegerX.size()
 			&& areSolutionsEqual(intSubset, integer_x, (*(lastIntegerX.begin())).second, integralityEps)
 			&& equal(runningAlpha, (*(lastIntegerX.begin())).first, alphaDist))
 		{
+			std::cout << "=======================" << std::endl;
+			std::cout << "Small Cycle Detected" << std::endl;
+			std::cout << "=======================" << std::endl;
+			
 			if (!pertCnt)  firstPerturbation = nitr;
+			if (!restartCnt)  firstRestart = nitr;
+
 			// directly apply restart if PDLP stalls at an integer but not primal feasible solution
 			if (!applyPdlpRestart) perturbe(integer_x, ignoreGenerals);
 			else restart(integer_x, ignoreGenerals);
 		}
-		
 
 		if (isInCache(runningAlpha, integer_x, ignoreGenerals))
 		{
+			std::cout << "=======================" << std::endl;
+			std::cout << "Integer Solution Is Already In Cache" << std::endl;
+			std::cout << "=======================" << std::endl;
 
 			if ((!usedOrigFpNoRestart) && (numFracsObj != 1))
+			// numFracsObj = 1, so skip
 			{
 				usedOrigFpNoRestart = true;
 				integer_x.resize(n, 0);
@@ -993,6 +1043,7 @@ bool FeasibilityPump::pumpLoop(double& runningAlpha, int stage, double& dualBoun
 			}
 
 			else if ((!usedOrigFpNoRestart) && (numIntegersObj != 1))
+			// numIntegersObj = 1, so skip
 			{
 				usedOrigFpNoRestart = true;
 			}
@@ -1000,7 +1051,8 @@ bool FeasibilityPump::pumpLoop(double& runningAlpha, int stage, double& dualBoun
 			else
 			{
 				usedOrigFpNoRestart = false;
-				// do a restart until we are able to insert it in the cache
+
+				// do a restart (max 10) until we are able to insert it in the cache
 				for (int rtry = 0; rtry < 10; rtry++)
 				{
 					if (isInCache(runningAlpha, integer_x, ignoreGenerals)) restart(integer_x, ignoreGenerals);
@@ -1010,7 +1062,7 @@ bool FeasibilityPump::pumpLoop(double& runningAlpha, int stage, double& dualBoun
 			}
 
 		}
-		else
+		else  // this is the case where we have a new integer point
 		{
 			usedOrigFpNoRestart = false;
 			lastIntegerX.push_front(AlphaVector(runningAlpha, integer_x));
@@ -1020,7 +1072,6 @@ bool FeasibilityPump::pumpLoop(double& runningAlpha, int stage, double& dualBoun
 		lpWatch.start();
 
 		double thisAlpha = runningAlpha;
-		
 
 		// points to be used in current obj 		
 		int currNumPointsInObj = ((usedOrigFpNoRestart)) ? 1 : std::min((int) lastIntegerX.size(), numIntegersObj);
@@ -1046,7 +1097,6 @@ bool FeasibilityPump::pumpLoop(double& runningAlpha, int stage, double& dualBoun
 		{
 			scoreInt = 0.0;
 			multipleIntegerX.sort();
-
 		}
 		multipleIntegerX.push_front(DistVector(scoreInt, integer_x));
 		if (multipleIntegerX.size() > numIntegersObj) multipleIntegerX.resize(numIntegersObj);
@@ -1062,7 +1112,8 @@ bool FeasibilityPump::pumpLoop(double& runningAlpha, int stage, double& dualBoun
 
 		if (harmonicWeights) scaleIntVec = harmonicVector(currNumPointsInObj);
 		else scaleIntVec = exponDecayVector(intScaleFactor,currNumPointsInObj);
-		// If aggregateInts=False we use a convex combination of distance functions of previous integers as abjoctive in the projection LP. 
+		
+		// if aggregateInts=False we use a convex combination of distance functions of previous integers as objective in the projection LP. 
 		if (!aggregateInts)
 		{
 			for(int iter = 0; iter < currNumPointsInObj; iter++)
@@ -1088,17 +1139,12 @@ bool FeasibilityPump::pumpLoop(double& runningAlpha, int stage, double& dualBoun
 
 				itrInt++;
 			}
-
-
-			
 			
 			if (stage > 1)
 			{
 				itrInt = multipleIntegerX.begin();
 				for(int iter = 0 ;iter < currNumPointsInObj ; iter++)
 				{
-
-
 					for (int j: gintegers)
 					{		
 						double distCoef = scaleIntVec[iter];
@@ -1110,6 +1156,7 @@ bool FeasibilityPump::pumpLoop(double& runningAlpha, int stage, double& dualBoun
 							distObj[j] += distCoef;
 
 						}
+
 						else if (equal(itrInt->second[j], ub[j], integralityEps))
 						{
 							if (expObj) distCoef = scaleIntVec[iter] * 0.5 * exp(-0.5 * (ub[j] - frac_x[j]));
@@ -1148,7 +1195,6 @@ bool FeasibilityPump::pumpLoop(double& runningAlpha, int stage, double& dualBoun
 								
 							}
 
-
 							else
 							{							
 								// add auxiliary variable
@@ -1182,11 +1228,10 @@ bool FeasibilityPump::pumpLoop(double& runningAlpha, int stage, double& dualBoun
 				DOMINIQS_ASSERT( distObj.size() == colIndices.size() );
 			}
 		}
-		// If aggregateInts=True we use a convex combination of integers as reference in the projection step. 
-		// The resulting point is not an integer, hence it should be rounded.
+		// if aggregateInts=True we use a convex combination of integers as reference in the projection step. 
+		// the resulting point is not an integer, hence it should be rounded.
 		else
 		{
-			
 			std::vector<double> aggr_integers;
 			aggr_integers.resize(n, 0);
 			std::vector<double> new_integer;
@@ -1256,7 +1301,6 @@ bool FeasibilityPump::pumpLoop(double& runningAlpha, int stage, double& dualBoun
 				}
 
 			}
-			
 
 			for (int j: binaries)
 			{
@@ -1271,7 +1315,6 @@ bool FeasibilityPump::pumpLoop(double& runningAlpha, int stage, double& dualBoun
 					distObj[j] = distCoef;
 				}
 			}
-
 
 			if (stage > 1)
 			{
@@ -1313,7 +1356,8 @@ bool FeasibilityPump::pumpLoop(double& runningAlpha, int stage, double& dualBoun
 		}
 
 		// randomize distance coefficients
-		if (randomizeLP)
+		if (randomizeLP)  
+		// randomizeLP = false, skip
 		{
 			for (int j = 0; j < (n + addedVars); j++)
 			{
@@ -1325,7 +1369,6 @@ bool FeasibilityPump::pumpLoop(double& runningAlpha, int stage, double& dualBoun
 		// objective FP
 		if (thisAlpha > 0.0)
 		{
-
 			double distScale = 0.0;
 			double objScale = 0.0;
 
@@ -1375,6 +1418,7 @@ bool FeasibilityPump::pumpLoop(double& runningAlpha, int stage, double& dualBoun
 			accumulate(&distObj[0], &obj[0], n, weight);
 		
 		}
+
 		// set objective
 		model->objcoefs(colIndices.size(), &colIndices[0], &distObj[0]);
 
@@ -1386,6 +1430,7 @@ bool FeasibilityPump::pumpLoop(double& runningAlpha, int stage, double& dualBoun
 
 		// if no solution is found because of timeLeft return false
 		primalFeas = model->isPrimalFeas();
+
 		if (primalFeas)
 		{
 			// get solution
@@ -1402,6 +1447,7 @@ bool FeasibilityPump::pumpLoop(double& runningAlpha, int stage, double& dualBoun
 					break;
 			}
 		}
+
 		if (!primalFeas) 
 		{
 			// if lpopt was interrupted because of the timelimit postsolve the model manually and exit the current stage
@@ -1420,8 +1466,11 @@ bool FeasibilityPump::pumpLoop(double& runningAlpha, int stage, double& dualBoun
 			colIndices.resize(n);
 			distObj.resize(n);
 			DOMINIQS_ASSERT( model->ncols() == n );
+
+			// if LP if infeasible the exit
 			return false;
 		}
+
 		consoleDebug(DebugLevel::VeryVerbose, "Iteration {}: time={} pFeas={} lpiter={} pdlp={}",
 				lpWatch.getPartial(), primalFeas, model->intAttr(IntAttr::SimplexIterations), model->intAttr(IntAttr::PDLPIterations));
 		double projObj = model->objval();
@@ -1454,6 +1503,7 @@ bool FeasibilityPump::pumpLoop(double& runningAlpha, int stage, double& dualBoun
 		int numFrac = solutionNumFractional(intSubset, frac_x, integralityEps);
 		
 		if (lessViolatedIntegers)
+		// skip, lessViolatedIntegers = false
 		{
 			std::list<AlphaVector>::iterator itrIntegers = multipleIntegerX.begin();
 			std::vector<double> integer_afterProj;
@@ -1475,7 +1525,9 @@ bool FeasibilityPump::pumpLoop(double& runningAlpha, int stage, double& dualBoun
 			else itrIntegers->first = intViolation;
 
 		}
+
 		if (lessDistanceIntegers)
+		// skip, lessDistanceIntegers = false
 		{
 			std::list<AlphaVector>::iterator itrIntegers = multipleIntegerX.begin();
 			if (bestObjIntegers) itrIntegers->first = dist*(dotProduct(&obj[0], &integer_x[0], n)+ objOffset);
@@ -1483,6 +1535,7 @@ bool FeasibilityPump::pumpLoop(double& runningAlpha, int stage, double& dualBoun
 		}
 
 		if (multirensStage3)
+		// skip, multirensStage3 = false
 		{
 			for (int j: integers)
 			{	
@@ -1498,8 +1551,10 @@ bool FeasibilityPump::pumpLoop(double& runningAlpha, int stage, double& dualBoun
 				}
 			}
 		}
+
 		// get best integer cache for stage 3 based on score
 		if (newStage3)
+		// skip, newStage3 = false
 		{	
 			double scoreIntS3 = 0.0;
 			// if ((stage3bestObjIntegers) && (stage3lessViolatedIntegers))
@@ -1510,8 +1565,8 @@ bool FeasibilityPump::pumpLoop(double& runningAlpha, int stage, double& dualBoun
 			// 		scoreIntS3 += std::max(0.0, c->violation(&integer_x[0]));
 			// 	}
 			// 	scoreIntS3 *= (dotProduct(&obj[0], &integer_x[0], n) + objOffset);
-
 			// }
+
 			if (stage3lessViolatedIntegers)
 			{
 				std::vector<double> integer_afterProj;
@@ -1570,8 +1625,6 @@ bool FeasibilityPump::pumpLoop(double& runningAlpha, int stage, double& dualBoun
 			if (p->size() > stage3IntegersObj) p->resize(stage3IntegersObj);
 		}
 
-
-
 		// save integer_x as best point if distance decreased and count number of itr without 10% improvement
 		if (dist < closestDist)
 		{
@@ -1585,7 +1638,7 @@ bool FeasibilityPump::pumpLoop(double& runningAlpha, int stage, double& dualBoun
 		else iterationsNoImpr ++;
 
 
-		//break loop if too many iterations without 10% improvement
+		// break loop if too many iterations without 10% improvement
 		if( iterationsNoImpr > maxItrNoImpr )
 		{
 			std::cout << "Too many iterations without 10% improvement" << std::endl;
@@ -1707,10 +1760,7 @@ bool FeasibilityPump::stage3()
 		std::cout << "Out of " << binaries.size() << " binary variables " << changedBoundsBins << " changed bounds" << std::endl;
 		std::cout << "Out of " << gintegers.size() << " integer variables " << changedBoundsInts << " changed bounds" << std::endl;
 		std::cout << "Out of " << gintegers.size() << " integer variables " << FixedInts << " were fixed" << std::endl;
-
-
 	}
-
 
 	if (rensClosestDistStage3)
 	{
