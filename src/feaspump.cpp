@@ -676,6 +676,7 @@ bool FeasibilityPump::pump(const std::vector<double>& xStart, bool pFeas)
 	LOG_ITEM("firstRestart", firstRestart);
 	LOG_ITEM("perturbationCnt", pertCnt);
 	LOG_ITEM("restartCnt", restartCnt);
+	LOG_ITEM("cycleCnt", cycleCnt);
 	LOG_ITEM("walksatCnt", walksatCnt);
 	if (stage == 3) LOG_ITEM("stage3Time", stage3Time);
 	return found;
@@ -719,9 +720,9 @@ void FeasibilityPump::solveInitialLP()
 
 void FeasibilityPump::perturbe(std::vector<double>& x, bool ignoreGeneralIntegers)
 {
-	std::cout << "=======================" << std::endl;
-	std::cout << "Doing perturbation .." << std::endl;
-	std::cout << "=======================" << std::endl;
+	// std::cout << "=======================" << std::endl;
+	// std::cout << "Doing perturbation .." << std::endl;
+	// std::cout << "=======================" << std::endl;
 	
 	pertCnt++;
 
@@ -811,9 +812,9 @@ void FeasibilityPump::perturbe(std::vector<double>& x, bool ignoreGeneralInteger
 
 void FeasibilityPump::restart(std::vector<double>& x, bool ignoreGeneralIntegers)
 {
-	std::cout << "=======================" << std::endl;
-	std::cout << "Doing restart .." << std::endl;
-	std::cout << "=======================" << std::endl;
+	// std::cout << "=======================" << std::endl;
+	// std::cout << "Doing restart .." << std::endl;
+	// std::cout << "=======================" << std::endl;
 
 	restartCnt++;
 
@@ -901,9 +902,9 @@ void FeasibilityPump::restart(std::vector<double>& x, bool ignoreGeneralIntegers
 
 bool FeasibilityPump::pumpLoop(double& runningAlpha, int stage, double& dualBound, double& timeModel)
 {
-	std::cout << "=======================" << std::endl;
-	std::cout << "We are now in PUMP LOOP" << std::endl;
-	std::cout << "=======================" << std::endl;
+	// std::cout << "=======================" << std::endl;
+	// std::cout << "We are now in PUMP LOOP" << std::endl;
+	// std::cout << "=======================" << std::endl;
 
 	// setup
 	lastIntegerX.clear();
@@ -981,6 +982,7 @@ bool FeasibilityPump::pumpLoop(double& runningAlpha, int stage, double& dualBoun
 		// here, we hard set numFracsObj to 1, so we can skip the aggregation
 		if (numFracsObj != 1 ) // aggregate fracs and then round
 		{
+			DOMINIQS_ASSERT( false );  // makes sure we skip this loop
 			std::vector<double> frac2round; // convex combination of fractional points
 			frac2round.resize(n, 0);
 			lastFracX.push_front(NumberVector(nitr,frac_x));
@@ -998,10 +1000,12 @@ bool FeasibilityPump::pumpLoop(double& runningAlpha, int stage, double& dualBoun
 		// again here we hard set numFracsObj to 1, so skip
 		else if (analcenterFP) 
 		{
+			DOMINIQS_ASSERT( false );  // makes sure we skip this loop
 			double bestgamma;
 			integerFromAC(integer_x, bestgamma, 0.05);
 		}
 
+		// round the last fractional point
 		else 
 		{	
 			frac2int->apply(frac_x, integer_x);
@@ -1011,13 +1015,14 @@ bool FeasibilityPump::pumpLoop(double& runningAlpha, int stage, double& dualBoun
 
 		// step 4: cycle detection and antistalling actions
 		// is it the same of the last one? if yes perturbe
-		if (lastIntegerX.size()
+
+		/* if (lastIntegerX.size()
 			&& areSolutionsEqual(intSubset, integer_x, (*(lastIntegerX.begin())).second, integralityEps)
 			&& equal(runningAlpha, (*(lastIntegerX.begin())).first, alphaDist))
 		{
-			std::cout << "=======================" << std::endl;
-			std::cout << "Small Cycle Detected" << std::endl;
-			std::cout << "=======================" << std::endl;
+			// std::cout << "=======================" << std::endl;
+			// std::cout << "Small Cycle Detected" << std::endl;
+			// std::cout << "=======================" << std::endl;
 			
 			if (!pertCnt)  firstPerturbation = nitr;
 			if (!restartCnt)  firstRestart = nitr;
@@ -1025,26 +1030,26 @@ bool FeasibilityPump::pumpLoop(double& runningAlpha, int stage, double& dualBoun
 			// directly apply restart if PDLP stalls at an integer but not primal feasible solution
 			if (!applyPdlpRestart) perturbe(integer_x, ignoreGenerals);
 			else restart(integer_x, ignoreGenerals);
-		}
+		} */
 
-		if (isInCache(runningAlpha, integer_x, ignoreGenerals))
-		{
-			std::cout << "=======================" << std::endl;
-			std::cout << "Integer Solution Is Already In Cache" << std::endl;
-			std::cout << "=======================" << std::endl;
+		int v = 0;
+		if (v = isInCache(runningAlpha, integer_x, ignoreGenerals)) {
+			std::cout << "Cycle. Same as " << v << std::endl;
+			cycleCnt++;
 
 			if ((!usedOrigFpNoRestart) && (numFracsObj != 1))
 			// numFracsObj = 1, so skip
 			{
+				DOMINIQS_ASSERT( false );  // makes sure we skip this loop
 				usedOrigFpNoRestart = true;
 				integer_x.resize(n, 0);
 				frac2int->apply(frac_x, integer_x);
-
 			}
 
 			else if ((!usedOrigFpNoRestart) && (numIntegersObj != 1))
 			// numIntegersObj = 1, so skip
 			{
+				DOMINIQS_ASSERT( false );  // makes sure we skip this loop
 				usedOrigFpNoRestart = true;
 			}
 			
@@ -1059,6 +1064,7 @@ bool FeasibilityPump::pumpLoop(double& runningAlpha, int stage, double& dualBoun
 					else break;
 				}
 				lastIntegerX.push_front(AlphaVector(runningAlpha, integer_x));
+				lastIntegerXindex[AlphaVector(runningAlpha, integer_x)] = nitr;
 			}
 
 		}
@@ -1066,6 +1072,7 @@ bool FeasibilityPump::pumpLoop(double& runningAlpha, int stage, double& dualBoun
 		{
 			usedOrigFpNoRestart = false;
 			lastIntegerX.push_front(AlphaVector(runningAlpha, integer_x));
+			lastIntegerXindex[AlphaVector(runningAlpha, integer_x)] = nitr;
 		}
 		
 		// int -> frac
@@ -1986,7 +1993,7 @@ void FeasibilityPump::foundIncumbent(const std::vector<double>& x, double objval
 	lastIntegerX.clear();
 }
 
-bool FeasibilityPump::isInCache(double a, const std::vector<double>& x, bool ignoreGeneralIntegers)
+int FeasibilityPump::isInCache(double a, const std::vector<double>& x, bool ignoreGeneralIntegers)
 {
 	bool found = false;
 	std::list< AlphaVector >::const_iterator itr = lastIntegerX.begin();
@@ -1995,7 +2002,7 @@ bool FeasibilityPump::isInCache(double a, const std::vector<double>& x, bool ign
 	{
 		while ((itr != end) && !found)
 		{
-			if ((fabs(a - itr->first) < alphaDist) && areSolutionsEqual(binaries, itr->second, integer_x, integralityEps)) found = true;
+			if ((fabs(a - itr->first) < alphaDist) && areSolutionsEqual(binaries, itr->second, integer_x, integralityEps)) return lastIntegerXindex[*itr];
 			++itr;
 		}
 	}
@@ -2003,7 +2010,7 @@ bool FeasibilityPump::isInCache(double a, const std::vector<double>& x, bool ign
 	{
 		while ((itr != end) && !found)
 		{
-			if ((fabs(a - itr->first) < alphaDist) && areSolutionsEqual(integers, itr->second, integer_x, integralityEps)) found = true;
+			if ((fabs(a - itr->first) < alphaDist) && areSolutionsEqual(integers, itr->second, integer_x, integralityEps)) return lastIntegerXindex[*itr];
 			++itr;
 		}
 	}

@@ -17,6 +17,6 @@ const char* FP_VERSION = "2.3";
  */
 
 #define FP_GIT_BRANCH "modified"
-#define FP_GIT_HASH "8008517-dirty"
+#define FP_GIT_HASH "af87d28-dirty"
 
 #endif /* FP_VERSION_H */

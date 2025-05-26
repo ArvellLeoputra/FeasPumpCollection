@@ -12,12 +12,14 @@
 
 #include <list>
 #include <set>
+#include <unordered_map>
 
 #include <utils/randgen.h>
 #include <utils/it_display.h>
 #include <utils/timer.h>
 
 #include "fp_interface.h"
+#include "pairhash.h"
 
 namespace dominiqs {
 
@@ -68,6 +70,7 @@ private:
 	bool walksatPerturbe;
 	bool randomizeLP;
 	bool penaltyObj;
+	int cycleCnt;
 
 	// new parameters
  	int itr1NoImpr; 	// max iterations without 10% improvent in stage 1
@@ -109,6 +112,7 @@ private:
 	// LP options
 	char firstOptMethod;
 	char reOptMethod;
+
 	// FP data
 	MIPModelPtr model;
 	double objOffset;
@@ -120,6 +124,8 @@ private:
 	typedef std::pair<double, std::vector<double>> AlphaVector;
 	std::list<AlphaVector> lastIntegerX; /**< integer x cache */
 
+	std::unordered_map<AlphaVector, int, PairHash> lastIntegerXindex;
+
 	typedef std::pair<int, std::vector<double>> NumberVector;
 	std::list<NumberVector> lastFracX; /**< fractional x cache */
 
@@ -128,12 +134,12 @@ private:
 	std::list<DistVector> closestIntegerXs1; /**< closest integer x cache stage 1*/
 	std::list<DistVector> closestIntegerXs2; /**< closest integer x cache stage 2*/
 
-
 	RandGen rnd;
 	std::vector<double> closestPoint; /**< point closest to feasibility */
 	std::vector<double> closestFrac; /**< projection of closest point to feasibility */
 
 	double closestDist;
+
 	// problem data
 	bool isPureInteger; /**< is it a mixed linear program? */
 	bool isBinary; /**< are there general integers? */
@@ -143,7 +149,6 @@ private:
 	std::vector<double> ub; /**< upper bounds */
 	std::vector<double> newlb; /**< lower bounds */
 	std::vector<double> newub; /**< upper bounds */
-
 
 	std::vector<char> xType; /**< column types */
 	std::vector<bool> fixed; /**< fixed status in the original formulation (usually due to presolve) */
@@ -172,6 +177,7 @@ private:
 	double rootTime;
 	double acTime;
 	int rootLpIter;
+
 	// helpers
 	void solveInitialLP();
 	void perturbe(std::vector<double>& x, bool ignoreGeneralIntegers);
@@ -179,9 +185,8 @@ private:
 	bool pumpLoop(double& runningAlpha, int stage, double& dualBound, double& timeModel);
 	bool stage3();
 	void foundIncumbent(const std::vector<double>& x, double objval);
-	bool isInCache(double a, const std::vector<double>& x, bool ignoreGeneralIntegers);
+	int isInCache(double a, const std::vector<double>& x, bool ignoreGeneralIntegers);
 	void infeasibleSupport(const std::vector<double>& x, std::set<int>& supp, bool ignoreGeneralIntegers);
-
 
 	// added function
 	void aggregateFracs(std::vector<double>& aggr_frac_x, std::vector<double>& scaleVector);
@@ -189,7 +194,6 @@ private:
 	void integerFromAC(std::vector<double>& x, double& bestgamma, double step);
 	bool isComponentSame(int idx);
 	bool isComponentSameS3(int idx);
-
 };
 
 } // namespace dominiqs
