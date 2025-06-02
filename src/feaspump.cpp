@@ -423,6 +423,7 @@ int FeasibilityPump::getIterations() const
 // resets the algorithm
 void FeasibilityPump::reset()
 {
+	std::cout << "resetting ..." << std::endl;
 	nitr = 0;
 	firstPerturbation = 0;
 	firstRestart = 0;
@@ -459,6 +460,7 @@ void FeasibilityPump::reset()
 
 void FeasibilityPump::init(MIPModelPtr _model, const std::vector<char>& ctype)
 {
+	std::cout << "starting init ..." << std::endl;
 	DOMINIQS_ASSERT( _model );
 	DOMINIQS_ASSERT( frac2int );
 	// INIT
@@ -529,6 +531,7 @@ void FeasibilityPump::init(MIPModelPtr _model, const std::vector<char>& ctype)
 
 bool FeasibilityPump::pump(const std::vector<double>& xStart, bool pFeas)
 {
+	std::cout << "pumping ..." << std::endl;
 	DOMINIQS_ASSERT( model );
 	DOMINIQS_ASSERT( frac2int );
 	chrono.start();
@@ -686,6 +689,7 @@ bool FeasibilityPump::pump(const std::vector<double>& xStart, bool pFeas)
 
 void FeasibilityPump::solveInitialLP()
 {
+	std::cout << "solving initial LP ..." << std::endl;
 	double timeLeft;
 	if (analcenterFP)
 	{
@@ -721,7 +725,7 @@ void FeasibilityPump::solveInitialLP()
 void FeasibilityPump::perturbe(std::vector<double>& x, bool ignoreGeneralIntegers)
 {
 	// std::cout << "=======================" << std::endl;
-	// std::cout << "Doing perturbation .." << std::endl;
+	std::cout << "Doing perturbation .." << std::endl;
 	// std::cout << "=======================" << std::endl;
 	
 	pertCnt++;
@@ -813,7 +817,7 @@ void FeasibilityPump::perturbe(std::vector<double>& x, bool ignoreGeneralInteger
 void FeasibilityPump::restart(std::vector<double>& x, bool ignoreGeneralIntegers)
 {
 	// std::cout << "=======================" << std::endl;
-	// std::cout << "Doing restart .." << std::endl;
+	std::cout << "Doing restart .." << std::endl;
 	// std::cout << "=======================" << std::endl;
 
 	restartCnt++;
@@ -903,7 +907,7 @@ void FeasibilityPump::restart(std::vector<double>& x, bool ignoreGeneralIntegers
 bool FeasibilityPump::pumpLoop(double& runningAlpha, int stage, double& dualBound, double& timeModel)
 {
 	// std::cout << "=======================" << std::endl;
-	// std::cout << "We are now in PUMP LOOP" << std::endl;
+	std::cout << "We are now in PUMP LOOP" << std::endl;
 	// std::cout << "=======================" << std::endl;
 
 	// setup
@@ -1013,24 +1017,33 @@ bool FeasibilityPump::pumpLoop(double& runningAlpha, int stage, double& dualBoun
 		roundWatch.stop();
 		consoleDebug(DebugLevel::Verbose, "roundingTime = {}", roundWatch.getPartial());
 
-		// step 4: cycle detection and antistalling actions
-		// is it the same of the last one? if yes perturbe
+		// step 4: short cycle detection and antistalling actions
+		// is it the same of the last one? if yes restart or perturb
+		// perturbe
 
-		/* if (lastIntegerX.size()
+		if (lastIntegerX.size()
 			&& areSolutionsEqual(intSubset, integer_x, (*(lastIntegerX.begin())).second, integralityEps)
 			&& equal(runningAlpha, (*(lastIntegerX.begin())).first, alphaDist))
 		{
-			// std::cout << "=======================" << std::endl;
-			// std::cout << "Small Cycle Detected" << std::endl;
-			// std::cout << "=======================" << std::endl;
+			std::cout << "=======================" << std::endl;
+			std::cout << "Small Cycle Detected" << std::endl;
+			std::cout << "=======================" << std::endl;
 			
-			if (!pertCnt)  firstPerturbation = nitr;
-			if (!restartCnt)  firstRestart = nitr;
+			if (pertCnt > 0 && firstPerturbation == 0) firstPerturbation = nitr - 1;
+
+			if (restartCnt > 0 && firstRestart == 0) firstRestart = nitr - 1;
 
 			// directly apply restart if PDLP stalls at an integer but not primal feasible solution
+
+			// std::cout << lpfeasible << std::endl;
+			// std::cout << isSolutionInteger(intSubset, frac_x, integralityEps) << std::endl;
+
 			if (!applyPdlpRestart) perturbe(integer_x, ignoreGenerals);
 			else restart(integer_x, ignoreGenerals);
-		} */
+		}
+
+		// step 5: long cycle detection (>1)
+		// is it the same as one of the previous integer points stored in the cache? if yes restart
 
 		int v = 0;
 		if (v = isInCache(runningAlpha, integer_x, ignoreGenerals)) {
@@ -1695,6 +1708,7 @@ bool FeasibilityPump::pumpLoop(double& runningAlpha, int stage, double& dualBoun
 
 bool FeasibilityPump::stage3()
 {
+	DOMINIQS_ASSERT(false);
 	if (model->aborted()) return false;
 	if (closestPoint.empty()) return false;
 	consoleInfo("[stage3]");
@@ -1986,6 +2000,7 @@ bool FeasibilityPump::stage3()
 
 void FeasibilityPump::foundIncumbent(const std::vector<double>& x, double objval)
 {
+	std::cout << "foundIncumbent" << std::endl;
 	incumbent = x;
 	primalBound = objval;
 	hasIncumbent = true;
@@ -1995,6 +2010,7 @@ void FeasibilityPump::foundIncumbent(const std::vector<double>& x, double objval
 
 int FeasibilityPump::isInCache(double a, const std::vector<double>& x, bool ignoreGeneralIntegers)
 {
+	std::cout << "checking Cache ..." << std::endl;
 	bool found = false;
 	std::list< AlphaVector >::const_iterator itr = lastIntegerX.begin();
 	std::list< AlphaVector >::const_iterator end = lastIntegerX.end();
@@ -2019,6 +2035,7 @@ int FeasibilityPump::isInCache(double a, const std::vector<double>& x, bool igno
 
 void FeasibilityPump::infeasibleSupport(const std::vector<double>& x, std::set<int>& supp, bool ignoreGeneralIntegers)
 {
+	std::cout << "infeasibleSupport" << std::endl;
 	if (supp.empty())
 	{
 		// find set of infeasible constraints
@@ -2045,6 +2062,7 @@ void FeasibilityPump::infeasibleSupport(const std::vector<double>& x, std::set<i
 }
 void FeasibilityPump::aggregateFracs( std::vector<double>& aggr_frac_x, std::vector<double>& scaleVector)
 {
+	std::cout << "aggregateFracs" << std::endl;
 	// iterator over fractional point
 	std::list< NumberVector >::const_iterator itr = lastFracX.begin();
 	std::list< NumberVector >::const_iterator end = lastFracX.end();
@@ -2066,6 +2084,7 @@ void FeasibilityPump::aggregateFracs( std::vector<double>& aggr_frac_x, std::vec
 
 void FeasibilityPump::computeAC(std::vector<double>& ac_x)
 {
+	std::cout << "computeAC" << std::endl;
 	int n = model->ncols();
 	std::vector<double> OrigObj(n, 0);
 	std::vector<double> EmptyObj(n, 0);

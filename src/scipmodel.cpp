@@ -6,39 +6,41 @@
 #include <fmt/format.h>
 #include <cassert>
 #include <utils/maths.h>
-
+#include <iostream>
 
 SCIP_STAGE SCIPModel::getProbStage()
 {
+  	std::cout << "getting Prob Stage ..." << std::endl;
 	DOMINIQS_ASSERT(scip);
 	return SCIPgetStage(scip);
 }
 
-
 std::vector<std::string> SCIPModel::getVarNames()
 {
+  	DOMINIQS_ASSERT(false);
+  	std::cout << "getting Var Names ..." << std::endl;
 	DOMINIQS_ASSERT(scip);
 	SCIP_STAGE stage = SCIPgetStage(scip);
-	if ( stage == SCIP_STAGE_PROBLEM) ;
+	if ( stage == SCIP_STAGE_PROBLEM ) ;
 	{
 		colNames(origColNames);
 		return origColNames;
 	}	
-	if ( stage == SCIP_STAGE_TRANSFORMED) ;
+	if ( stage == SCIP_STAGE_TRANSFORMED ) ;
 	{
 		colNames(transColNames);
 		return transColNames;
 	}		
-	if ( stage == SCIP_STAGE_PRESOLVED) ;
+	if ( stage == SCIP_STAGE_PRESOLVED ) ;
 	{
 		colNames(presColNames);
 		return presColNames;
 	}			
 }
 
-SCIPModel::SCIPModel()
-{	
-	// Done
+SCIPModel::SCIPModel()  // default constructor for SCIPModel
+{
+  	std::cout << "constructing SCIP model ..." << std::endl;
 	// initialize scip problem
 	DOMINIQS_ASSERT(SCIPcreate(&scip));
 	DOMINIQS_ASSERT(scip);
@@ -47,10 +49,9 @@ SCIPModel::SCIPModel()
 	DOMINIQS_ASSERT(SCIPreadParams(scip, "FPscip.set"));
 }
 
-
-SCIPModel::SCIPModel(SCIP* _prob, bool _ownProb) : scip(_prob), ownProb(_ownProb)
-{	
-	// Done
+SCIPModel::SCIPModel(SCIP* _prob, bool _ownProb) : scip(_prob), ownProb(_ownProb)  // constructor for SCIPModel with existing SCIP problem
+{
+	DOMINIQS_ASSERT(false);
 	// assert problem
 	DOMINIQS_ASSERT(scip);
 }
@@ -69,20 +70,18 @@ SCIPModel::~SCIPModel()
 	// }
 }
 
-
 /* Read/Write */
 void SCIPModel::readModel(const std::string& filename)
-{	
-	// Done
+{
+  	std::cout << "reading Model ..." << std::endl;
 	// read problem from file
 	DOMINIQS_ASSERT(scip);
-	DOMINIQS_ASSERT(SCIPreadProb(scip, filename.c_str(), NULL));
+	DOMINIQS_ASSERT(SCIPreadProb(scip, filename.c_str(), NULL));  // reads problem and init. solving data structures
 	// colNames(origColNames);
 	DOMINIQS_ASSERT((getProbStage(),SCIP_STAGE_PROBLEM));
 	DOMINIQS_ASSERT(SCIPtransformProb(scip));
 	DOMINIQS_ASSERT((getProbStage(),SCIP_STAGE_TRANSFORMED));
 	// colNames(transColNames);
-
 }
 
 void SCIPModel::writeModel(const std::string& filename, const std::string& format) const
@@ -95,11 +94,10 @@ void SCIPModel::writeSol(const std::string& filename) const
     // later
 }
 
-
 /* Solve */
 double SCIPModel::lpopt(char method, bool decrease_tol, bool initial)
-{	
-	// Done
+{
+  	std::cout << "selecting method ..." << std::endl;
 	// Which is the default method for soplex?
 	DOMINIQS_ASSERT(lpi);
 	switch(method)
@@ -124,9 +122,9 @@ double SCIPModel::lpopt(char method, bool decrease_tol, bool initial)
 }
 
 /* Solve mip */
-void SCIPModel::mipopt()
-{	
-	// Done
+void SCIPModel::mipopt()  // called in stage 3
+{
+  	DOMINIQS_ASSERT(false);
 	// solve mip
 	DOMINIQS_ASSERT(scip);
 	DOMINIQS_ASSERT(SCIPsolve(scip));
@@ -134,7 +132,8 @@ void SCIPModel::mipopt()
 
 /* presolve mip */
 void SCIPModel::presolve()
-{	
+{
+  	std::cout << "presolving ..." << std::endl;
 	// presolve the problem
 	DOMINIQS_ASSERT(scip);
 	// SCIPsetIntParam(scip, "display/verblevel", 4);
@@ -151,8 +150,8 @@ void SCIPModel::presolve()
 
 // Postsolve the problem
 void SCIPModel::postsolve()
-{	
-	// Done
+{
+  	std::cout << "postsolving ..." << std::endl;
 	// probably not needed since we can access original vars and constraints in scip
 	if (!stageLP) 
 	{
@@ -163,8 +162,7 @@ void SCIPModel::postsolve()
 
 /* get solution vector in the original space */
 std::vector<double> SCIPModel::postsolveSolution(const std::vector<double>& preX) const
-{	
-	// Done
+{
 	// create sol for the presolved MIP
 	SCIP_SOL *sol;
 	SCIPcreateSol(scip,  &sol, NULL);
@@ -194,7 +192,6 @@ std::vector<double> SCIPModel::postsolveSolution(const std::vector<double>& preX
 	SCIPfreeSol(scip, &sol);
 	return origX;
 }
-
 
 /* Get solution */
 double SCIPModel::objval() const
@@ -1319,7 +1316,7 @@ SCIPModel* SCIPModel::presolvedmodel_impl()
 	DOMINIQS_ASSERT(SCIPcopy(scip, copy->scip, NULL, NULL, NULL, true, false, false, false, NULL));
 	DOMINIQS_ASSERT(copy->scip);
 	DOMINIQS_ASSERT(SCIPaddOrigObjoffset(copy->scip, offset));
-	// get LPI	
+	// get LPI
 	DOMINIQS_ASSERT(SCIPgetLPI(scip, &lpi));
 	SCIP_OBJSEN senseLP;
 	DOMINIQS_ASSERT(SCIPlpiGetObjsen(lpi, &senseLP));

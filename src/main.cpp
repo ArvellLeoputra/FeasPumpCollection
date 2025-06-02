@@ -108,14 +108,15 @@ int main (int argc, char const *argv[])
 #endif
 
 	if (!model)  throw std::runtime_error("No solver available for FP");
-
 	DOMINIQS_ASSERT(model);
 	double integralityEps = model->dblParam(DblParam::IntegralityTolerance);
 	gConfig().set("fp.integralityEps", integralityEps);
 	model->logging(true);
 	try
 	{
+		std::cout << 1 << std::endl;
 		model->readModel(args.input[0]);
+		std::cout << 2 << std::endl;
 		consoleLog("originalProblem: #rows={} #cols={} #nnz={}",
 					model->nrows(), model->ncols(), model->nnz());
 
@@ -124,9 +125,11 @@ int main (int argc, char const *argv[])
 		bool hasPresolve = false;
 		if (mipPresolve)
 		{
+
 			model->dblParam(DblParam::TimeLimit, timeLimit);
 			model->presolve();
 			premodel = model->presolvedModel();
+			std::cout << "test" << std::endl;
 			if (!premodel)
 			{
 				// presolve made no reduction: just clone the original model

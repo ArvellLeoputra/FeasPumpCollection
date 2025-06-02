@@ -17,8 +17,6 @@
 
 class SCIPModel: public MIPModelI
 {
-
-
 public:
 	SCIPModel();
 	SCIPModel(SCIP* scip, bool _ownProb = false);

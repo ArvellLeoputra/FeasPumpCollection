@@ -121,7 +121,7 @@ private:
 	std::vector<double> ac_x; /**< analytic center */
 	int primalFeas; /**< is current fractional x^* primal feasible? */
 	std::vector<double> integer_x; /**< integer x^~ */
-	typedef std::pair<double, std::vector<double>> AlphaVector;
+	typedef std::pair<double, std::vector<double>> AlphaVector; /**< (alpha, integer_x) */
 	std::list<AlphaVector> lastIntegerX; /**< integer x cache */
 
 	std::unordered_map<AlphaVector, int, PairHash> lastIntegerXindex;
