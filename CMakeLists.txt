@@ -75,7 +75,7 @@ target_include_directories(fp2 PUBLIC
 )
 
 if (APPLE)
-	target_link_libraries(fp2 -Wl,-force_load Prop::Lib -Wl,-force_load Fp::Lib Utils::Lib fmt::fmt)
+	target_link_libraries(fp2 -Wl,-force_load Prop::Lib -Wl,-force_load Fp::Lib)
 else()
 	target_link_libraries(fp2  -Wl,--whole-archive Prop::Lib Fp::Lib -Wl,--no-whole-archive Utils::Lib fmt::fmt)
 endif()
